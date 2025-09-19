@@ -1,7 +1,9 @@
-#define WINVER 0x0501
-#define _WIN32_WINNT 0x0501
 #define Floor 935
+#define ID_TM_MAINLOOP	1
+#define ID_TM_ANIMATION 2
+
 #include <windows.h>
+
 #pragma comment(lib, "gdi32.lib")
 #pragma comment(lib, "msimg32.lib")
 
@@ -10,13 +12,7 @@ VOID    CALLBACK MainLoopProc(HWND, UINT, UINT_PTR, DWORD);
 
 HINSTANCE g_hInst;
 HWND hWndMain;
-LPSTR lpszClass = "[ MemoryDC Buffering (Double Buffering) ]";
-
-#define ID_TM_MAINLOOP	1
-#define ID_TM_ANIMATION 2
-
-bool Is_Jump = FALSE;
-bool Is_Idle = TRUE;
+LPSTR lpszClass = "Easy_Game";
 
 typedef struct SURFACEINFOtag
 {
@@ -33,9 +29,19 @@ int g_nMonIdx = 0;
 
 typedef struct OBJ_MONtag
 {
-	SURFACEINFO	g_sfPlayer[2];
+	SURFACEINFO	g_sf_Idle_Player[2];
+
+	SURFACEINFO	g_sf_Left_Idle_Player[2];
+	SURFACEINFO	g_sf_Right_Idle_Player[2];
+
+	SURFACEINFO	g_sf_Left_Jump_Player[1];
+	SURFACEINFO	g_sf_Right_Jump_Player[1];
+
 	int			nAni;
-	int			nLife;
+
+	bool Is_Jump = FALSE;
+	bool Is_Fall = FALSE;
+	bool Is_Idle = TRUE;
 } OBJ_MON;
 
 SURFACEINFO g_sfBack;
@@ -107,13 +113,6 @@ void __ReleaseSurface(SURFACEINFO* psInfo)
 	DeleteObject(psInfo->hBmp);
 }
 
-/*
-BOOL __PutImage(HDC dcDst, int x, int y, SURFACEINFO* psInfo)
-{
-	return BitBlt(dcDst, x, y, psInfo->nWidth, psInfo->nHeight, psInfo->dcSurface, 0, 0, SRCCOPY);
-}
-*/
-
 BOOL __PutImage(HDC dcDst, int x, int y, int nDstWidth, int nDstHeight, SURFACEINFO* psInfo)
 {
 	return StretchBlt(dcDst,        // 대상 DC
@@ -153,81 +152,6 @@ BOOL __PutSprite(HDC dcDst, int x, int y, int nDstWidth, int nDstHeight, SURFACE
 		0, 0, psInfo->nWidth, psInfo->nHeight,
 		psInfo->crColorKey);
 }
-
-/*
-BOOL __PutSprite(HDC dcDst, int x, int y, int nDstWidth, int nDstHeight, SURFACEINFO* psInfo)
-{
-	HDC hdc;
-	HBITMAP hBmp, hBmpOld;
-
-	hdc = CreateCompatibleDC(dcDst);
-	hBmp = CreateCompatibleBitmap(dcDst, nDstWidth, nDstHeight);
-	hBmpOld = (HBITMAP)SelectObject(hdc, hBmp);
-
-	 StretchBlt(dcDst,        // 대상 DC
-		x, y,           // 대상 시작 X, Y 좌표
-		nDstWidth,      // 늘릴 너비
-		nDstHeight,     // 늘릴 높이
-		psInfo->dcSurface,  // 원본 DC
-		0, 0,           // 원본 시작 X, Y 좌표
-		psInfo->nWidth, // 원본 너비
-		psInfo->nHeight, // 원본 높이
-		SRCCOPY);
-
-	BOOL bResult = TransparentBlt(
-		dcDst, x, y, nDstWidth, nDstHeight,
-		hdc, 0, 0, nDstWidth, nDstHeight,
-		psInfo->crColorKey
-	);
-
-	SelectObject(hdc, hBmpOld);
-	DeleteObject(hBmp);
-	DeleteDC(hdc);
-
-	return bResult;
-}
-*/
-
-/*
-BOOL __PutSprite(HDC dcDst, int x, int y, int nDstWidth, int nDstHeight, SURFACEINFO* psInfo, SURFACEINFO* psMask)
-{
-	HDC hdcTemp = CreateCompatibleDC(dcDst);
-	HBITMAP hBmpOld = (HBITMAP)SelectObject(hdcTemp, psInfo->hBmp);
-
-	// 1. 마스크 비트맵 적용 (AND 연산)
-	BitBlt(dcDst, x, y, psInfo->nWidth * 2, psInfo->nHeight * 2,
-		psMask->dcSurface, 0, 0, SRCAND);
-
-	// 2. 캐릭터 비트맵 적용 (OR 연산)
-	BitBlt(dcDst, x, y, psInfo->nWidth * 2, psInfo->nHeight * 2,
-		psInfo->dcSurface, 0, 0, SRCPAINT);
-
-	StretchBlt(dcDst,        // 대상 DC
-		x, y,           // 대상 시작 X, Y 좌표
-		nDstWidth,      // 늘릴 너비
-		nDstHeight,     // 늘릴 높이
-		psMask->dcSurface,  // 원본 DC
-		0, 0,           // 원본 시작 X, Y 좌표
-		psInfo->nWidth, // 원본 너비
-		psInfo->nHeight, // 원본 높이
-		SRCAND);
-
-	StretchBlt(dcDst,        // 대상 DC
-		x, y,           // 대상 시작 X, Y 좌표
-		nDstWidth,      // 늘릴 너비
-		nDstHeight,     // 늘릴 높이
-		psInfo->dcSurface,  // 원본 DC
-		0, 0,           // 원본 시작 X, Y 좌표
-		psInfo->nWidth, // 원본 너비
-		psInfo->nHeight, // 원본 높이
-		SRCPAINT);
-
-	SelectObject(hdcTemp, hBmpOld);
-	DeleteDC(hdcTemp);
-
-	return TRUE;
-}
-*/
 
 BOOL __CompleteBlt(HDC dcScreen, SURFACEINFO* psInfo)
 {
@@ -298,39 +222,37 @@ void __Init(HDC dcScreen)
 	int i;
 	char strName[24];
 
-	////
 	__CreateBackBuffer(dcScreen, 1920, 1080, 32, &g_sfBack);
 
-	////
 	__SetImgSurface(&g_sfBG);
 	g_sfBG.hBmp = __MakeDDBFromDIB(dcScreen, "map.bmp");
 	__LoadSurface(dcScreen, &g_sfBG);
 
-	if (Is_Idle == TRUE)
+	for (i = 0; i < 2; i++)
 	{
-		for (i = 0; i < 2; i++)
-		{
-			__SetImgSurface(&(g_objPlayer.g_sfPlayer[i]));
-			wsprintf(strName, "Player_Idle_%d.bmp", i + 1);
-			g_objPlayer.g_sfPlayer[i].hBmp = __MakeDDBFromDIB(dcScreen, strName);
-			__LoadSurface(dcScreen, &(g_objPlayer.g_sfPlayer[i]));
-		}
+		__SetImgSurface(&(g_objPlayer.g_sf_Right_Idle_Player[i]));
+		wsprintf(strName, "Player_Right_Idle_%d.bmp", i + 1);
+		g_objPlayer.g_sf_Idle_Player[i].hBmp = __MakeDDBFromDIB(dcScreen, strName);
+		__LoadSurface(dcScreen, &(g_objPlayer.g_sf_Idle_Player[i]));
 	}
 
-	if (Is_Jump == TRUE)
+	for (i = 0; i < 2; i++)
 	{
-		__SetImgSurface(&(g_objPlayer.g_sfPlayer[0]));
-		wsprintf(strName, "Player_Jump.bmp");
-		g_objPlayer.g_sfPlayer[0].hBmp = __MakeDDBFromDIB(dcScreen, strName);
-		__LoadSurface(dcScreen, &(g_objPlayer.g_sfPlayer[0]));
+		__SetImgSurface(&(g_objPlayer.g_sf_Left_Idle_Player[i]));
+		wsprintf(strName, "Player_Left_Idle_%d.bmp", i + 1);
+		g_objPlayer.g_sf_Idle_Player[i].hBmp = __MakeDDBFromDIB(dcScreen, strName);
+		__LoadSurface(dcScreen, &(g_objPlayer.g_sf_Idle_Player[i]));
 	}
 
-	/*
-	__SetImgSurface(&(g_objPlayer.g_sfPlayer[1]));
-	wsprintf(strName, "Player_Idle_%d.bmp", 2);
-	g_objPlayer.g_sfPlayer[1].hBmp = __MakeDDBFromDIB(dcScreen, strName);
-	__LoadSurface(dcScreen, &(g_objPlayer.g_sfPlayer[1]));
-	*/
+	__SetImgSurface(&(g_objPlayer.g_sf_Right_Jump_Player[0]));
+	wsprintf(strName, "Player_Right_Jump.bmp");
+	g_objPlayer.g_sf_Right_Jump_Player[0].hBmp = __MakeDDBFromDIB(dcScreen, strName);
+	__LoadSurface(dcScreen, &(g_objPlayer.g_sf_Right_Jump_Player[0]));
+
+	__SetImgSurface(&(g_objPlayer.g_sf_Left_Jump_Player[0]));
+	wsprintf(strName, "Player_Left_Jump.bmp");
+	g_objPlayer.g_sf_Left_Jump_Player[0].hBmp = __MakeDDBFromDIB(dcScreen, strName);
+	__LoadSurface(dcScreen, &(g_objPlayer.g_sf_Left_Jump_Player[0]));
 }
 
 void __DestroyAll()
@@ -339,89 +261,87 @@ void __DestroyAll()
 
 	for (i = 0; i < 2; i++)
 	{
-		__ReleaseSurface(&(g_objPlayer.g_sfPlayer[i]));
+		__ReleaseSurface(&(g_objPlayer.g_sf_Idle_Player[i]));
 	}
 
 	__ReleaseSurface(&g_sfBG);
 	__ReleaseSurface(&g_sfBack);
 }
 
-static int x = 100;
-static int y = 100;
+static float x = 100;
+static float y = 100;
+
+static float f_Temp_x = 0;
+static float f_Temp_y = 0;
 
 void CALLBACK MainLoopProc(HWND hWnd, UINT message, UINT_PTR iTimerID, DWORD dwTime)
 {
-	char  strBuff[24];
 	HDC   dcScreen;
 	BOOL  bRval;
 
-	//연산부
-	//중력
-	if (y >= Floor)
+	//// 연산부
+
+	
+
+	if (f_Temp_y < y)
 	{
-		y = Floor;
+		g_objPlayer.Is_Fall = TRUE;
+		g_objPlayer.Is_Idle = FALSE;
+		g_objPlayer.Is_Jump = TRUE;
 	}
-	else
+	else if (f_Temp_y > y)
 	{
-		y = y + 5;
+		g_objPlayer.Is_Fall = FALSE;
+		g_objPlayer.Is_Idle = FALSE;
+		g_objPlayer.Is_Jump = TRUE;
+	}
+	else if (f_Temp_y == y)
+	{
+		g_objPlayer.Is_Fall = FALSE;
+		g_objPlayer.Is_Idle = TRUE;
+		g_objPlayer.Is_Jump = FALSE;
 	}
 
-	if (GetAsyncKeyState(VK_UP) & 0x8000 && GetAsyncKeyState(VK_RIGHT) & 0x8000)
-	{
-		if (y == Floor)
-		{
-			Is_Idle = FALSE;
-			Is_Jump = TRUE;
+	f_Temp_x = x;
+	f_Temp_y = y;
 
-			y -= 200;
-			x -= 10;
-		}
-		else
-		{
-			x -= 10;
-		}
-	}
-	if (GetAsyncKeyState(VK_UP) & 0x8000 && GetAsyncKeyState(VK_LEFT) & 0x8000)
-	{
-		if (y == Floor)
-		{
-			Is_Idle = FALSE;
-			Is_Jump = TRUE;
-
-			y -= 200;
-			x += 10;
-		}
-		else
-		{
-			x -= 10;
-		}
-	}
-	if (GetAsyncKeyState(VK_RIGHT) & 0x8000)
-	{
-		x += 10;
-	}
-
-	if (GetAsyncKeyState(VK_LEFT) & 0x8000)
-	{
-		x -= 10;
-	}
-
+	
 	//// 출력부
 	dcScreen = GetDC(hWnd);
 	{
 		//// 배경
-		//__PutImage(g_sfBack.dcSurface, 0, nBgY, &g_sfBG);
 		__PutImage(g_sfBack.dcSurface, 0, 0, g_sfBack.nWidth, g_sfBack.nHeight, &g_sfBG);
 
-		//__PutImageBlend(g_sfBack.dcSurface, 0, 0, &g_sfBG, 128);
-
 		// 오브젝트 및 기타 인터페이스창
-		bRval = __PutSprite(g_sfBack.dcSurface, x, y , 100, 100, &(g_objPlayer.g_sfPlayer[g_objPlayer.nAni]));
-		//bRval = __PutSprite(g_sfBack.dcSurface, 100, 100, &(g_objPlayer.g_sfPlayer[0/*g_objPlayer.nAni*/], &(g_sfPlayerMask[0]));
+		bRval = __PutSprite(g_sfBack.dcSurface, x, y , 100, 100, &(g_objPlayer.g_sf_Idle_Player[g_objPlayer.nAni]));
 		if (!bRval)	::OutputDebugString("__PutSprite - fail");
-	
-		::wsprintf(strBuff, "Frame %d", ++g_nFrame);
-		::TextOut(g_sfBack.dcSurface, 10, 10, strBuff, strlen(strBuff));
+
+		if (g_objPlayer.Is_Fall == TRUE)
+		{
+			TextOut(g_sfBack.dcSurface, 10, 10, "Is_Fall = TRUE", strlen("Is_Fall = TRUE"));
+		}
+		else if (g_objPlayer.Is_Fall == FALSE)
+		{
+			TextOut(g_sfBack.dcSurface, 10, 10, "Is_Fall = FALSE", strlen("Is_Fall = FALSE"));
+		}
+
+		if (g_objPlayer.Is_Idle == TRUE)
+		{
+			TextOut(g_sfBack.dcSurface, 10, 30, "Is_Idle = TRUE", strlen("Is_Idle = TRUE"));
+		}
+		else if (g_objPlayer.Is_Idle == FALSE)
+		{
+			TextOut(g_sfBack.dcSurface, 10, 30, "Is_Idle = FALSE", strlen("Is_Idle = FALSE"));
+		}
+
+		if (g_objPlayer.Is_Jump == TRUE)
+		{
+			TextOut(g_sfBack.dcSurface, 10, 50, "Is_Jump = TRUE", strlen("Is_Jump = TRUE"));
+		}
+		else if (g_objPlayer.Is_Jump == FALSE)
+		{
+			TextOut(g_sfBack.dcSurface, 10, 50, "Is_Jump = FALSE", strlen("Is_Jump = FALSE"));
+		}
 
 		//// 출력 완료
 		__CompleteBlt(dcScreen, &g_sfBack);

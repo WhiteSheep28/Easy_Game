@@ -1,4 +1,11 @@
 ﻿  main.cpp
-C:\Users\white\source\repos\Easy_Game\Easy_Game\main.cpp(76,16): warning C4244: 'return': 'WPARAM'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-C:\Users\white\source\repos\Easy_Game\Easy_Game\main.cpp(424,56): warning C4267: '인수': 'size_t'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-  Easy_Game.vcxproj -> C:\Users\white\source\repos\Easy_Game\x64\Debug\Easy_Game.exe
+C:\Users\admin\Downloads\Easy_Game-main\Easy_Game\Easy_Game\main.cpp(82,16): warning C4244: 'return': 'WPARAM'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\admin\Downloads\Easy_Game-main\Easy_Game\Easy_Game\main.cpp(313,46): warning C4244: '인수': 'float'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\admin\Downloads\Easy_Game-main\Easy_Game\Easy_Game\main.cpp(313,43): warning C4244: '인수': 'float'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\admin\Downloads\Easy_Game-main\Easy_Game\Easy_Game\main.cpp(318,64): warning C4267: '인수': 'size_t'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\admin\Downloads\Easy_Game-main\Easy_Game\Easy_Game\main.cpp(322,65): warning C4267: '인수': 'size_t'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\admin\Downloads\Easy_Game-main\Easy_Game\Easy_Game\main.cpp(327,64): warning C4267: '인수': 'size_t'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\admin\Downloads\Easy_Game-main\Easy_Game\Easy_Game\main.cpp(331,65): warning C4267: '인수': 'size_t'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\admin\Downloads\Easy_Game-main\Easy_Game\Easy_Game\main.cpp(336,64): warning C4267: '인수': 'size_t'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\admin\Downloads\Easy_Game-main\Easy_Game\Easy_Game\main.cpp(340,65): warning C4267: '인수': 'size_t'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+  Easy_Game.vcxproj -> C:\Users\admin\Downloads\Easy_Game-main\Easy_Game\x64\Debug\Easy_Game.exe
